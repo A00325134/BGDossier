@@ -1,0 +1,23 @@
+## Title: Battleground Dossier
+## Description: Persistent Battleground history, player encounters and observed combat intelligence.
+## Author: Battleground Dossier contributors
+## Version: 1.2.0
+## APIVersion: 101051
+## SavedVariables: BattlegroundDossierSavedVariables
+
+Core.lua
+Storage.lua
+PlayerDatabase.lua
+API.lua
+CombatTracker.lua
+MatchTracker.lua
+UIData.lua
+UIComponents.lua
+UI.lua
+UIViews.lua
+UIDossier.lua
+UIStatistics.lua
+Commands.lua
+Keybindings.lua
+Bindings.xml
+BattlegroundDossier.lua
