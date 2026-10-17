@@ -1,0 +1,12 @@
+## Title: BGSessionTracker
+## Description: Wanna cum? Then Bust it on me Cutie UwU!
+## Author: GoatTaro
+## Version: 1.0.0
+## AddOnVersion: 10000
+## APIVersion: 101051
+## SavedVariables: BGSessionTrackerSavedVariables
+
+Core.lua
+Tracking.lua
+UI.lua
+BGSessionTracker.lua

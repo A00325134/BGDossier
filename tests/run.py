@@ -14,12 +14,21 @@ for file in files:
 lua.execute((root / "tests" / "spec.lua").read_text(encoding="utf-8"), name="@tests/spec.lua")
 lua.execute((root / "tests" / "ui_spec.lua").read_text(encoding="utf-8"), name="@tests/ui_spec.lua")
 lua.execute((root / "tests" / "reliability_spec.lua").read_text(encoding="utf-8"), name="@tests/reliability_spec.lua")
+lua.execute((root / "tests" / "merge_spec.lua").read_text(encoding="utf-8"), name="@tests/merge_spec.lua")
+lua.execute((root / "tests" / "personal_spec.lua").read_text(encoding="utf-8"), name="@tests/personal_spec.lua")
+lua.execute((root / "tests" / "production_ui_spec.lua").read_text(encoding="utf-8"), name="@tests/production_ui_spec.lua")
 bindings = ET.parse(root / "Bindings.xml").getroot()
 assert bindings.tag == "Bindings"
 action = bindings.find("./Layer[@name='SI_KEYBINDINGS_LAYER_GENERAL']/Category[@name='SI_BGD_KEYBINDINGS_CATEGORY']/Action[@name='BGD_TOGGLE']")
 assert action is not None and action.findtext("Down") == "BattlegroundDossier.Keybindings:Toggle()"
+hud_action = bindings.find("./Layer/Category/Action[@name='BGD_TOGGLE_HUD']")
+assert hud_action is not None and hud_action.findtext("Down") == "BattlegroundDossier.Keybindings:ToggleHUD()"
+assert len(bindings.findall("./Layer/Category/Action")) == 2
 assert not bindings.findall(".//Binding") and not bindings.findall(".//Bind")
 manifest = (root / "BattlegroundDossier.txt").read_text().splitlines()
 assert manifest.index("Keybindings.lua") < manifest.index("Bindings.xml") < manifest.index("BattlegroundDossier.lua")
+assert manifest.index("UIData.lua") < manifest.index("PersonalHistory.lua") < manifest.index("UIComponents.lua") < manifest.index("UI.lua")
+assert manifest.index("UI.lua") < manifest.index("UIPersonalHistory.lua") < manifest.index("UIStatistics.lua")
+assert "tracker/" not in "\n".join(manifest) and "BGSessionTrackerSavedVariables" not in "\n".join(manifest)
 print("Native keybinding XML and manifest order verified; no default binding.")
 print(f"Compiled and loaded {len(files)} addon files under Lua 5.1.")

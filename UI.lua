@@ -12,15 +12,17 @@ function U:Preferences()
     if type(prefs.abilityIcons) ~= "boolean" then prefs.abilityIcons = true end
     local validTab = false; for _, s in ipairs(sections) do if s == prefs.defaultTab then validTab = true end end
     if not validTab then prefs.defaultTab = "MATCHES" end
+    if prefs.statisticsView ~= "Lifetime overview" and prefs.statisticsView ~= "BG History" then prefs.statisticsView = "Lifetime overview" end
     return prefs
 end
 function U:Initialize()
     local prefs = self:Preferences()
     self.section, self.view = prefs.defaultTab, "history"
     self.states, self.abilitySorts, self.abilityPages, self.abilityCache = {}, {}, {}, {}
+    self.personalCharacter, self.personalSort, self.personalDescending, self.personalPage, self.personalReturn = nil, nil, nil, nil, nil
     local w = WINDOW_MANAGER:CreateTopLevelWindow("BattlegroundDossierWindow"); self.window = w
     w:SetDimensions(1180, 800); w:SetClampedToScreen(true); w:SetMovable(true); w:SetMouseEnabled(true)
-    w:SetHidden(true); w:SetScale(B.db.settings.scale); self:Position(); C:Backdrop(w, T.background)
+    w:SetHidden(true); self:ApplyScale(); self:Position(); C:Backdrop(w, T.background)
     C:Label(w, "BATTLEGROUND DOSSIER", 28, 13, 850, 38, "ZoFontWinH1"):SetColor(unpack(T.gold))
     self.sectionLabel = C:Label(w, "", 30, 54, 1000, 26, "ZoFontGame")
     C:Button(w, "×", 1114, 20, 40, function() self:SetVisible(false) end)
@@ -33,9 +35,9 @@ function U:Initialize()
     end
     self.backButton = C:Button(w, "‹ Back", 884, 92, 126, function() self:Back() end)
     C:Button(w, "Latest match", 1020, 92, 136, function() self:Last() end)
-    self.toolbar = C:New(w, CT_CONTROL); C:Place(self.toolbar, w, 24, 137, 1132, 72); C:Backdrop(self.toolbar)
-    self.searchLabel = C:Label(self.toolbar, "SEARCH PLAYERS / ACCOUNTS", 12, 0, 280, 28, "ZoFontGame")
-    self.searchBox = C:Search(self.toolbar, 12, 29, 295, function(text)
+    self.toolbar = C:New(w, CT_CONTROL); C:Place(self.toolbar, w, 24, 137, 1132, 80); C:Backdrop(self.toolbar)
+    self.searchLabel = C:Label(self.toolbar, "SEARCH PLAYERS / ACCOUNTS", 12, 6, 295, 26, "ZoFontGame")
+    self.searchBox = C:Search(self.toolbar, 12, 38, 295, function(text)
         if self.bindingSearch then return end
         self.search = B.Normalize(text) or ""; self.page = 1
         EVENT_MANAGER:UnregisterForUpdate(B.name .. "Search")
@@ -47,13 +49,13 @@ function U:Initialize()
     self.dropdowns, self.dropLabels = {}, {}
     for i, width in ipairs({ 155, 238, 230 }) do
         local x = ({ 320, 487, 737 })[i]
-        self.dropLabels[i] = C:Label(self.toolbar, "", x, 0, width, 28, "ZoFontGame")
-        self.dropdowns[i] = C:Dropdown(self.toolbar, x, 29, width)
+        self.dropLabels[i] = C:Label(self.toolbar, "", x, 6, width, 26, "ZoFontGame")
+        self.dropdowns[i] = C:Dropdown(self.toolbar, x, 38, width)
     end
-    self.clearButton = C:Button(self.toolbar, "Clear filters", 982, 29, 138, function() self:ClearFilters() end)
+    self.clearButton = C:Button(self.toolbar, "Clear filters", 982, 38, 138, function() self:ClearFilters() end)
     self.contextLabel = C:Label(self.toolbar, "", 12, 16, 1095, 40, "ZoFontGame")
     self.scroll = C:New(w, nil, "ZO_ScrollContainer")
-    self.scroll:SetAnchor(TOPLEFT, w, TOPLEFT, 24, 220); self.scroll:SetAnchor(BOTTOMRIGHT, w, BOTTOMRIGHT, -24, -42)
+    self.scroll:SetAnchor(TOPLEFT, w, TOPLEFT, 24, 230); self.scroll:SetAnchor(BOTTOMRIGHT, w, BOTTOMRIGHT, -24, -42)
     self.body = self.scroll:GetNamedChild("ScrollChild"); self.body:SetResizeToFitDescendents(false); self.body:SetDimensions(1110, 520)
     self.canvas = C:Canvas(self.body, 1110)
     self.footer = C:Label(w, "Client-visible observations • Event counts are not casts • Team results are not duels", 30, 763, 1115, 26, "ZoFontGame")
@@ -63,11 +65,19 @@ function U:Initialize()
     end)
     w:SetHandler("OnEffectivelyHidden", function()
         EVENT_MANAGER:UnregisterForUpdate(B.name .. "ViewRefresh"); EVENT_MANAGER:UnregisterForUpdate(B.name .. "Search")
-        self.searchBox:LoseFocus(); ClearTooltip(InformationTooltip)
+        C:CancelNumeric(); self.searchBox:LoseFocus(); ClearTooltip(InformationTooltip)
     end)
     EVENT_MANAGER:RegisterForEvent(B.name .. "UICombat", EVENT_PLAYER_COMBAT_STATE, function(_, combat) if combat then self:SetVisible(false) end end)
+    EVENT_MANAGER:RegisterForEvent(B.name .. "UIResize", EVENT_SCREEN_RESIZED, function() self:ApplyScale() end)
 end
 function U:Number(value) return V.Number(value, B.db.settings.presentation and B.db.settings.presentation.compactNumbers) end
+function U:ApplyScale()
+    local width, height = GuiRoot:GetWidth(), GuiRoot:GetHeight()
+    -- Preserve requested SavedVariables scale; only the rendered scale fits
+    -- the current root dimensions (including ESO's own UI scale).
+    self.effectiveScale = math.max(0.1, math.min(B.db.settings.scale, (width - 24) / 1180, (height - 24) / 800))
+    self.window:SetScale(self.effectiveScale)
+end
 function U:Position()
     self.window:ClearAnchors(); local p = B.db.settings.position
     if type(p) == "table" and type(p.x) == "number" and type(p.y) == "number" then self.window:SetAnchor(TOPLEFT, GuiRoot, TOPLEFT, p.x, p.y)
@@ -76,13 +86,13 @@ end
 function U:SetVisible(visible)
     if visible then SCENE_MANAGER:ShowTopLevel(self.window)
     else
-        self.searchBox:LoseFocus(); ClearTooltip(InformationTooltip)
+        C:CancelNumeric(); self.searchBox:LoseFocus(); ClearTooltip(InformationTooltip)
         EVENT_MANAGER:UnregisterForUpdate(B.name .. "Search"); EVENT_MANAGER:UnregisterForUpdate(B.name .. "ViewRefresh")
         SCENE_MANAGER:HideTopLevel(self.window)
     end
 end
 function U:RefreshIfChanged()
-    if self.window:IsHidden() or B.API:Call("IsUnitInCombat", "player") then return end
+    if self.window:IsHidden() or C.activeNumeric or B.API:Call("IsUnitInCombat", "player") then return end
     if self.seenMatches ~= B.db.matches or self.seenProfiles ~= B.db.profiles or self.seenLast ~= B.db.matches[#B.db.matches] or self.seenTotal ~= B.db.stats.total or self.seenSettings ~= self:SettingsStamp() then
         self.abilityCache = {}; self:Render(true)
     end
@@ -92,6 +102,10 @@ function U:SettingsStamp()
     for _, key in ipairs({ "debug", "autoOpen", "notifications", "observeCombat", "scale", "historyLimit", "profileLimit", "frequentThreshold" }) do parts[#parts + 1] = tostring(settings[key]) end
     local prefs = settings.presentation or {}
     for _, key in ipairs({ "compactNumbers", "abilityIcons", "defaultTab" }) do parts[#parts + 1] = tostring(prefs[key]) end
+    local live = B.LiveSession
+    if live and live:IsReady() then
+        for _, key in ipairs({ "visible", "visibilityMode", "locked", "scale", "opacity", "header", "x", "y" }) do parts[#parts + 1] = tostring(live.preferences[key]) end
+    end
     return table.concat(parts, ":")
 end
 function U:SaveState()
@@ -106,6 +120,9 @@ function U:RestoreScroll(state)
     if self.canvas.tableUsed > 0 then self.canvas.tables[1].scroll:GetNamedChild("Scroll"):SetVerticalScroll(state.tableScroll or 0) end
 end
 function U:Open(section)
+    self.searchBox:LoseFocus()
+    EVENT_MANAGER:UnregisterForUpdate(B.name .. "Search")
+    if section == "MATCHES" or section == "PLAYERS" then self.personalReturn = nil end
     self:SaveState(); self.section = section or self.section
     local state = self.states[self.section] or {}
     self.page, self.search = state.page or 1, state.search or ""
@@ -115,6 +132,7 @@ function U:Open(section)
 end
 function U:Toggle() if self.window:IsHidden() then self:SetVisible(true); self:Render(true) else self:SetVisible(false) end end
 function U:Last()
+    self.personalReturn = nil
     for i = #B.db.matches, 1, -1 do if B.Storage:Valid(B.db.matches[i]) then self:OpenMatch(B.db.matches[i]); return end end
     self:Open("MATCHES")
 end
@@ -129,6 +147,13 @@ function U:Back()
     if self.section == "MATCHES" and self.view ~= "history" then
         if self.view == "dossier" or self.view == "comparison" then self.view, self.expanded = "scoreboard", nil; self:Render(); self:RestoreScroll(self.rosterState)
         else
+            if self.personalReturn then
+                local state = self.personalReturn; self.personalReturn = nil
+                self.section = "STATISTICS"; B.db.settings.presentation.statisticsView = "BG History"
+                self:Render(); self:RestoreScroll(state)
+                if self.personalTable then self.personalTable.scroll:GetNamedChild("Scroll"):SetVerticalScroll(state.personalScroll or 0) end
+                return
+            end
             self.view, self.expanded = "history", nil
             local state = self.states.MATCHES or {}; self.page, self.search = state.page or 1, state.search or ""
             self:Render(); self:RestoreScroll(state)
@@ -138,6 +163,7 @@ function U:Back()
     else self:Open("MATCHES") end
 end
 function U:ClearFilters()
+    self.searchBox:LoseFocus()
     self.filters = { result = "All results", mode = "All modes", format = "All formats" }
     self.teamFilter, self.search, self.page = "All players", "", 1; self:Render()
 end
@@ -153,7 +179,9 @@ function U:Toolbar()
     local searchable = history or roster or players
     self.searchLabel:SetHidden(not searchable); self.searchBox.container:SetHidden(not searchable)
     self.clearButton:SetHidden(not searchable); self.contextLabel:SetHidden(searchable)
-    self.bindingSearch = true; self.searchBox:SetText(self.search); self.bindingSearch = false
+    if not self.searchBox:HasFocus() then
+        self.bindingSearch = true; self.searchBox:SetText(self.search); self.bindingSearch = false
+    end
     for i = 1, 3 do self.dropLabels[i]:SetHidden(true); self.dropdowns[i].control:SetHidden(true) end
     local function dropdown(index, title, options, selected, callback)
         self.dropLabels[index]:SetText(title); self.dropLabels[index]:SetHidden(false); self.dropdowns[index].control:SetHidden(false)
@@ -188,6 +216,7 @@ function U:Render(preserveScroll)
     if not self.canvas then return end
     self:Preferences()
     ClearTooltip(InformationTooltip); self.canvas:Begin(); self:Toolbar()
+    if self.personalSelector then self.personalSelector.control:SetHidden(true) end
     for _, section in ipairs(sections) do C:ButtonStyle(self.tabs[section], section == self.section) end
     self.sectionLabel:SetText(self.section .. "  /  " .. (self.section == "MATCHES" and string.upper(self.view) or self.section == "PLAYERS" and self.profile and "PLAYER DOSSIER" or "OVERVIEW"))
     self.backButton:SetHidden(not (self.section == "MATCHES" and self.view ~= "history" or self.section == "PLAYERS" and self.profile))
@@ -208,8 +237,8 @@ end
 function U:Pager(rows, size)
     size = size or 40; local pages = math.max(1, math.ceil(#rows / size)); self.page = math.max(1, math.min(self.page, pages))
     local c = self.canvas
-    c:Button("‹ Previous", 12, c.y, 125, function() self.page = math.max(1, self.page - 1); self:Render() end)
-    c:Button("Next ›", 147, c.y, 125, function() self.page = math.min(pages, self.page + 1); self:Render() end)
+    C:SetButtonEnabled(c:Button("‹ Previous", 12, c.y, 125, function() self.page = math.max(1, self.page - 1); self:Render() end), self.page > 1)
+    C:SetButtonEnabled(c:Button("Next ›", 147, c.y, 125, function() self.page = math.min(pages, self.page + 1); self:Render() end), self.page < pages)
     c:Label("Page " .. self.page .. " / " .. pages .. "    •    " .. #rows .. " records", 290, c.y, 700, 34, "ZoFontGame", T.muted); c.y = c.y + 44
     local slice = {}; for i = (self.page - 1) * size + 1, math.min(#rows, self.page * size) do slice[#slice + 1] = rows[i] end
     return slice

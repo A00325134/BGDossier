@@ -108,7 +108,7 @@ function S:NewSession(map, world)
     B.db.sequence = B.db.sequence + 1
     local now = B.Now()
     local s = { id = world .. ":" .. tostring(now) .. ":" .. B.db.sequence, mapId = map, world = world,
-        startedAt = now, observations = {}, seenRoster = {}, localCharacter = GetUnitName("player") }
+        startedAt = now, observations = {}, seenRoster = {}, localCharacter = GetUnitName("player"), localCharacterId = B.API:Call("GetCurrentCharacterId") }
     B.db.active = s
     return s
 end
@@ -127,8 +127,10 @@ function S:Commit(m)
     end
     local stats = B.Copy(B.db.stats)
     local staged = B.Copy(m)
+    local liveSession
     local ok, err = pcall(function()
         B.Players:Record(staged, profiles)
+        if B.LiveSession then liveSession = B.LiveSession:StageMatch(m) end
         stats.total = (stats.total or 0) + 1
         local outcome = m.outcome or "Unresolved"
         stats[outcome] = (stats[outcome] or 0) + 1
@@ -148,7 +150,9 @@ function S:Commit(m)
     B.db.profiles, B.db.stats = profiles, stats
     B.db.matches[#B.db.matches + 1] = m
     B.db.lastSavedId = m.id
+    if liveSession then B.LiveSession:PublishMatch(liveSession) end
     self:Prune()
+    if liveSession then B.LiveSession:RefreshAfterMatch() end
     return true
 end
 function S:Reset()

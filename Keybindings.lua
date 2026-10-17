@@ -1,13 +1,19 @@
 local B = BattlegroundDossier
 ZO_CreateStringId("SI_BINDING_NAME_BGD_TOGGLE", "Toggle Battleground Dossier")
+ZO_CreateStringId("SI_BINDING_NAME_BGD_TOGGLE_HUD", "Toggle Live Session HUD")
 ZO_CreateStringId("SI_BGD_KEYBINDINGS_CATEGORY", "Battleground Dossier")
 B.Keybindings = {}
 function B.Keybindings:Toggle()
+    if B.Controls:IsEditing() then return end
     if B.UI and B.UI.window then B.UI:Toggle() end
 end
-function B.Keybindings:Assigned()
+function B.Keybindings:ToggleHUD()
+    if B.Controls:IsEditing() then return end
+    if B.LiveSession then B.LiveSession:Toggle() end
+end
+function B.Keybindings:Assigned(actionName)
     if not GetActionIndicesFromName or not GetActionBindingInfo or not GetMaxBindingsPerAction or not GetKeyName then return nil end
-    local ok, layer, category, action = pcall(GetActionIndicesFromName, "BGD_TOGGLE")
+    local ok, layer, category, action = pcall(GetActionIndicesFromName, actionName or "BGD_TOGGLE")
     if not ok or not layer or not category or not action then return nil end
     local countOk, count = pcall(GetMaxBindingsPerAction)
     if not countOk or type(count) ~= "number" or count < 1 or count > 32 then return nil end

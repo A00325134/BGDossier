@@ -4,6 +4,9 @@
             <Action name="BGD_TOGGLE">
                 <Down>BattlegroundDossier.Keybindings:Toggle()</Down>
             </Action>
+            <Action name="BGD_TOGGLE_HUD">
+                <Down>BattlegroundDossier.Keybindings:ToggleHUD()</Down>
+            </Action>
         </Category>
     </Layer>
 </Bindings>

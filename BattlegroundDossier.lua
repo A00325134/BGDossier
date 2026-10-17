@@ -4,6 +4,7 @@ local function OnLoaded(_, addonName)
     EVENT_MANAGER:UnregisterForEvent(B.name, EVENT_ADD_ON_LOADED)
     local db = ZO_SavedVars:NewAccountWide("BattlegroundDossierSavedVariables", 1, nil, {})
     if not B.Storage:Initialize(db) then return end
+    B.LiveSession:Initialize()
     B.UI:Initialize()
     B.InitializeCommands()
     B.Match:Initialize()

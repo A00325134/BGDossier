@@ -12,16 +12,15 @@ function U:History()
         return
     end
     local columns = {
-        { title = "BATTLEGROUND", key = "map", width = 260, text = V.MapName },
+        { title = "BATTLEGROUND", key = "map", width = 260, flex = 1, text = V.MapName },
         { title = "MODE", key = "modeName", width = 150 },
         { title = "DATE / TIME", key = "finishedAt", width = 190, text = function(m) return B.DateTime(m.finishedAt) end },
         { title = "RESULT", key = "outcome", width = 100, text = function(m) return resultLabels[m.outcome] or "Unresolved" end, color = function(m) return resultColors[m.outcome] or T.muted end },
         { title = "FORMAT", key = "format", width = 90, text = V.Format },
         { title = "K / D / A", key = "kda", width = 105, text = function(m) local p = V.LocalPlayer(m) or {}; return B.Value(p.kills) .. "/" .. B.Value(p.deaths) .. "/" .. B.Value(p.assists) end },
         { title = "DAMAGE", key = "damage", width = 100, numeric = true, text = function(m) local p = V.LocalPlayer(m) or {}; return self:Number(p.damage) end },
-        { title = "PLACE", key = "placement", width = 55, numeric = true, text = function(m) return B.Value(m.placement) end },
     }
-    c:Table(columns, self:Pager(rows), { height = 365, rowHeight = 54, resetScroll = self.resetTables,
+    c:Table(columns, self:Pager(rows), { height = 365, rowHeight = C.layout.rowHeight, resetScroll = self.resetTables,
         stripe = function(m) return resultColors[m.outcome] or T.border end,
         onClick = function(m) self:OpenMatch(m) end,
         tooltip = function(m)
@@ -61,13 +60,13 @@ function U:Scoreboard(m)
         c.y = c.y + 44
     end
     local columns = {
-        { title = "PLAYER", key = "character", width = 240, text = function(p) return (p.isLocal and "★ " or (p.previousEncounters or 0) > 0 and "◆ " or "") .. V.Name(p) end,
+        { title = "PLAYER", key = "character", width = 300, flex = 1, text = function(p) return (p.isLocal and "★ " or (p.previousEncounters or 0) > 0 and "◆ " or "") .. V.Name(p) end,
             color = function(p) return p.isLocal and T.gold or T.text end },
-        { title = "CLASS", key = "classId", width = 110, text = V.Class },
-        { title = "TEAM", key = "team", width = 70, text = function(p) local relation = B.TeamRelation(m, p); return relation == "unknown" and "—" or tostring(p.team) .. (relation == "ally" and " Ally" or " Opp") end },
+        { title = "CLASS", key = "classId", width = 104, text = V.Class },
+        { title = "TEAM", key = "team", width = 76, align = TEXT_ALIGN_CENTER, text = function(p) local relation = B.TeamRelation(m, p); return relation == "unknown" and "—" or tostring(p.team) .. (relation == "ally" and " Ally" or " Opp") end },
     }
-    for _, item in ipairs({ { "K", "kills", 40 }, { "D", "deaths", 40 }, { "A", "assists", 40 }, { "DAMAGE", "damage", 110 },
-        { "HEALING", "healing", 110 }, { "SCORE", "score", 90 }, { "OBJ.", "objective", 100 } }) do
+    for _, item in ipairs({ { "K", "kills", 40 }, { "D", "deaths", 40 }, { "A", "assists", 40 }, { "DAMAGE", "damage", 96 },
+        { "HEALING", "healing", 96 }, { "SCORE", "score", 80 }, { "OBJ.", "objective", 80 } }) do
         local key = item[2]
         columns[#columns + 1] = { title = item[1], key = key, width = item[3], numeric = true,
             text = function(p) return self:Number(p[key]) end,
@@ -101,6 +100,7 @@ function U:Scoreboard(m)
             c:Paragraph("Round " .. r .. " • " .. B.API:ModeName(round.mode) .. " • " .. table.concat(scores, "  /  "))
         end
     end
+    self:PersonalRoleAssignment(m)
 end
 function U:Players()
     if self.profile then self:PlayerProfile(self.profile); return end
@@ -113,18 +113,21 @@ function U:Players()
     end
     local columns = {
         { title = "PLAYER", key = "account", width = 280, text = V.ProfileName },
-        { title = "CLASSES SEEN", key = "classes", width = 180, text = function(p)
+        { title = "CLASSES SEEN", key = "classes", width = 145, text = function(p)
             local names = {}; for id in pairs(p.classes or {}) do names[#names + 1] = V.Class({ classId = id }) end; table.sort(names); return table.concat(names, ", ")
         end },
-        { title = "SEEN", key = "encounters", width = 95, numeric = true, text = function(p) return self:Number(p.encounters) end },
-        { title = "ALLY", key = "allies", width = 75, numeric = true, text = function(p) return self:Number(p.allies) end },
-        { title = "OPPONENT", key = "opponents", width = 95, numeric = true, text = function(p) return self:Number(p.opponents) end },
-        { title = "TEAM W / L / D", key = "record", width = 155, text = function(p) return B.Value(p.wins) .. "/" .. B.Value(p.losses) .. "/" .. B.Value(p.draws) end },
-        { title = "FAMILIARITY", key = "familiar", width = 170, text = function(p) return B.Players:Classification(p):gsub(" Player", "") end },
+        { title = "SEEN", key = "encounters", width = 75, numeric = true, text = function(p) return self:Number(p.encounters) end },
+        { title = "ALLY", key = "allies", width = 85, numeric = true, text = function(p) return self:Number(p.allies) end },
+        { title = "OPPONENT", key = "opponents", width = 115, numeric = true, text = function(p) return self:Number(p.opponents) end },
+        { title = "TEAM W / L / D", key = "record", width = 190, align = TEXT_ALIGN_CENTER, text = function(p) return B.Value(p.wins) .. " / " .. B.Value(p.losses) .. " / " .. B.Value(p.draws) end },
+        { title = "FAMILIARITY", key = "familiar", width = 160, align = TEXT_ALIGN_CENTER, text = function(p) return B.Players:Classification(p):gsub(" Player", "") end },
     }
     c:Table(columns, self:Pager(rows), { height = 365, rowHeight = 44, resetScroll = self.resetTables,
         onClick = function(p) self:SaveState(); self.profile, self.dossierTab, self.profileAbilityScope = p, "Overview", "Lifetime"; self:Render() end,
-        stripe = function(p) return (p.opponents or 0) >= (p.allies or 0) and T.enemy or T.ally end,
+        stripe = function(p)
+            local opponents, allies = p.opponents or 0, p.allies or 0
+            return opponents > allies and T.enemy or allies > opponents and T.ally or T.muted
+        end,
         tooltip = function(p) return V.ProfileName(p) .. "\n" .. B.Players:Classification(p)
             .. "\nFirst seen " .. B.Date(p.firstSeen) .. " • Last seen " .. B.Date(p.lastSeen)
             .. "\nUnresolved team results: " .. B.Value(p.unresolved) .. "\nClick to open dossier" end })

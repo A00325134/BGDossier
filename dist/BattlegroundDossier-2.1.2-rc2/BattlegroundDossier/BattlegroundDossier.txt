@@ -1,0 +1,28 @@
+## Title: Battleground Dossier
+## Description: Battleground analysis, player intelligence and live session HUD.
+## Author: Battleground Dossier contributors, GoatTaro (original session HUD)
+## Version: 2.1.2-rc2
+## APIVersion: 101051
+## SavedVariables: BattlegroundDossierSavedVariables
+
+Core.lua
+Storage.lua
+PlayerDatabase.lua
+API.lua
+CombatTracker.lua
+MatchTracker.lua
+LiveSessionCore.lua
+LiveSession.lua
+LiveSessionHUD.lua
+UIData.lua
+PersonalHistory.lua
+UIComponents.lua
+UI.lua
+UIViews.lua
+UIDossier.lua
+UIPersonalHistory.lua
+UIStatistics.lua
+Commands.lua
+Keybindings.lua
+Bindings.xml
+BattlegroundDossier.lua

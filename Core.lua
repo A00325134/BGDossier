@@ -1,4 +1,4 @@
-BattlegroundDossier = { name = "BattlegroundDossier", version = "1.2.0", schema = 1 }
+BattlegroundDossier = { name = "BattlegroundDossier", version = "2.1.2-rc2", schema = 1 }
 local B = BattlegroundDossier
 B.MAX_ABILITIES = 80
 B.MAX_CHARACTERS = 24
@@ -15,6 +15,17 @@ function B.Copy(value)
 end
 function B.Count(t) local n = 0; for _ in pairs(t or {}) do n = n + 1 end; return n end
 function B.Now() return GetTimeStamp() end
+-- Display only: raw scoreboard names and persistent identity keys remain intact.
+function B.CharacterName(name)
+    if type(name) ~= "string" or name == "" then return "Unknown player" end
+    if name:sub(1, 1) == "@" then return name end
+    if type(zo_strformat) == "function" and SI_UNIT_NAME then
+        local ok, formatted = pcall(zo_strformat, SI_UNIT_NAME, name)
+        if ok and type(formatted) == "string" and formatted ~= "" then return formatted end
+    end
+    -- Only the terminal ESO gender markers; never strip arbitrary caret text.
+    return (name:gsub("%^[MF]x$", ""))
+end
 function B.Normalize(name)
     if type(name) ~= "string" then return nil end
     -- Only ESO grammatical suffixes and presentation markup are removed. No fuzzy matching.

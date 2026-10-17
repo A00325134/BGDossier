@@ -5,7 +5,10 @@ function M:Initialize()
     B.Combat:Initialize()
     EVENT_MANAGER:RegisterForEvent(B.name, EVENT_BATTLEGROUND_STATE_CHANGED, function(_, previous, current) self:State(previous, current) end)
     EVENT_MANAGER:RegisterForEvent(B.name, EVENT_BATTLEGROUND_SCOREBOARD_UPDATED, function() self:Roster(); if self.pending then self:TryCapture() end end)
-    EVENT_MANAGER:RegisterForEvent(B.name, EVENT_PLAYER_ACTIVATED, function() self:Activated() end)
+    EVENT_MANAGER:RegisterForEvent(B.name, EVENT_PLAYER_ACTIVATED, function()
+        self:Activated()
+        if B.LiveSession and B.LiveSession:IsReady() then B.LiveSession:RequestRank() end
+    end)
     EVENT_MANAGER:RegisterForEvent(B.name, EVENT_PLAYER_DEACTIVATED, function() self:Leaving() end)
     self:Activated()
 end
@@ -16,6 +19,9 @@ function M:Stop()
     B.Combat:SetActive(false)
 end
 function M:Activated()
+    -- Reuse the existing activation owner: login/reload and every zone/loading
+    -- transition refresh the HUD without polling or another event subscription.
+    if B.LiveSession then B.LiveSession:ApplyVisibility() end
     if not B.API:Call("IsActiveWorldBattleground") then
         self:Flush("left Battleground")
         self:Stop(); self.session = nil; B.db.active = nil
@@ -24,6 +30,7 @@ function M:Activated()
     self:EnsureSession()
     if self.session then self.session.captureFailed = nil end
     local state = B.API:Call("GetCurrentBattlegroundState")
+    if B.LiveSession then B.LiveSession:OnMatchObserved(self.session, state) end
     if state == BATTLEGROUND_STATE_FINISHED then self:Finish() else self:Roster(); B.Combat:SetActive(state == BATTLEGROUND_STATE_RUNNING) end
 end
 function M:EnsureSession(force)
@@ -54,6 +61,7 @@ function M:State(previous, current)
     local force = previous == BATTLEGROUND_STATE_FINISHED and current ~= BATTLEGROUND_STATE_FINISHED
     if force then self:Flush("new match started") end
     self:EnsureSession(force)
+    if B.LiveSession then B.LiveSession:OnMatchObserved(self.session, current) end
     B.Debug("State " .. tostring(previous) .. " -> " .. tostring(current))
     if current == BATTLEGROUND_STATE_FINISHED then self:Finish()
     else

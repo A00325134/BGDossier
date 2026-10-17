@@ -86,8 +86,8 @@ function U:AbilityList(abilities, title, key)
     local visible, pages = rows, math.ceil(#rows / 80)
     if pages > 1 then
         local page = math.max(1, math.min(self.abilityPages[key] or 1, pages)); self.abilityPages[key] = page
-        c:Button("‹ Previous abilities", 12, c.y, 230, function() self.abilityPages[key] = math.max(1, page - 1); self:Render() end)
-        c:Button("Next abilities ›", 254, c.y, 230, function() self.abilityPages[key] = math.min(pages, page + 1); self:Render() end)
+        C:SetButtonEnabled(c:Button("‹ Previous abilities", 12, c.y, 230, function() self.abilityPages[key] = math.max(1, page - 1); self:Render() end), page > 1)
+        C:SetButtonEnabled(c:Button("Next abilities ›", 254, c.y, 230, function() self.abilityPages[key] = math.min(pages, page + 1); self:Render() end), page < pages)
         c:Label("Page " .. page .. " / " .. pages .. " • All " .. #rows .. " recorded IDs remain accessible", 500, c.y, 580, 34, "ZoFontGame", T.muted)
         c.y = c.y + 44; visible = {}
         for i = (page - 1) * 80 + 1, math.min(page * 80, #rows) do visible[#visible + 1] = rows[i] end
@@ -117,7 +117,7 @@ function U:ProfileSummary(p, excludeId)
     local c = self.canvas
     self:EncounterCards(p)
     c:Heading("KNOWN IDENTITY", "Identity confidence: " .. (p.confidence or "unknown") .. ". Character-only records are not automatically merged into account profiles.")
-    local characters = {}; for _, character in pairs(p.characters or {}) do characters[#characters + 1] = character end; table.sort(characters)
+    local characters = {}; for _, character in pairs(p.characters or {}) do characters[#characters + 1] = B.CharacterName(character) end; table.sort(characters)
     c:Paragraph("Characters: " .. (#characters > 0 and table.concat(characters, ", ") or "Unavailable"))
     local classes = {}; for id in pairs(p.classes or {}) do classes[#classes + 1] = V.Class({ classId = id }) end; table.sort(classes)
     c:Paragraph("Classes observed: " .. (#classes > 0 and table.concat(classes, ", ") or "Unavailable"), T.muted)

@@ -71,7 +71,8 @@ function A:Snapshot(session)
     local hasRounds = self:Call("DoesBattlegroundHaveRounds", session.mapId) == true
     local mode = self:Call("GetCurrentBattlegroundGameType", round)
     local m = { id = session.id, world = session.world, mapId = session.mapId, startedAt = session.startedAt,
-        finishedAt = session.finishedAt, localCharacter = session.localCharacter, roundIndex = round, hasRounds = hasRounds,
+        finishedAt = session.finishedAt, localCharacter = session.localCharacter, localCharacterId = session.localCharacterId,
+        liveHUDSessionId = session.liveHUDSessionId, roundIndex = round, hasRounds = hasRounds,
         mode = mode, modeName = self:ModeName(mode), map = self:Call("GetBattlegroundName", session.mapId),
         teams = {}, players = {}, rounds = {}, apiVersion = self:Call("GetAPIVersion"),
         competitive = self:Call("DoesCurrentBattlegroundImpactMMR"), teamCapacity = self:Call("GetBattlegroundTeamSize", session.mapId) }

@@ -1,0 +1,12 @@
+<Bindings>
+    <Layer name="SI_KEYBINDINGS_LAYER_GENERAL">
+        <Category name="SI_BGD_KEYBINDINGS_CATEGORY">
+            <Action name="BGD_TOGGLE">
+                <Down>BattlegroundDossier.Keybindings:Toggle()</Down>
+            </Action>
+            <Action name="BGD_TOGGLE_HUD">
+                <Down>BattlegroundDossier.Keybindings:ToggleHUD()</Down>
+            </Action>
+        </Category>
+    </Layer>
+</Bindings>

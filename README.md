@@ -1,23 +1,24 @@
 # Battleground Dossier
 
-An independent Elder Scrolls Online addon for saved Battleground scoreboards, player encounters, comparisons and observed combat abilities. No libraries, companion software, network access or BGSessionTracker dependency are needed in game.
+An independent Elder Scrolls Online addon for saved Battleground scoreboards, player encounters, comparisons, observed combat abilities and a lightweight live session HUD. No libraries, companion software, network access or BGSessionTracker dependency are needed in game.
 
-Version **1.2.0** targets **ESO API 101051 (Update 51)**. The project owner has confirmed the tracking systems and 1.1 UI working in ESO. This final pass adds native keybindings and targeted data-reliability corrections while preserving that interface. **The new 1.2 changes have not been live-tested by the developer.** See [the reliability audit and final in-game checklist](docs/RELIABILITY_AUDIT.md).
+Version **2.1.2-rc2** targets **ESO API 101051 (Update 51)**. It fixes the rc1 button-hover error by reading native button text through its label and removes PLACE from the Match History listing, giving its width to Battleground names. Native numeric input and the earlier styling improvements remain intact. The owner has tested earlier builds in ESO; **this candidate has not been live-tested by the developer**. See [root-cause evidence, changed files and the release checklist](docs/RELEASE_CANDIDATE_UI.md). Existing Personal BG History, session visibility, tracking and SavedVariables remain intact.
 
-Existing matches, encounter histories, ability IDs and observations remain compatible. SavedVariables schema stays at **1**. New participant IDs/confidence, completeness diagnostics, final-team counts and localized zone names are optional annotations on new captures. Old records are read without inventing these fields. There is no destructive migration, history reset or dependency change. `CombatTracker.lua` remains unchanged; the collection/storage fixes are described in the audit.
+Existing matches, encounter histories, combat observations, settings and the main keybinding remain compatible. SavedVariables schema stays at **1**. HUD preferences and session state are added in a separately versioned, character-specific `liveHUD` subtree. No history reset or destructive migration occurs. The original `tracker/` source stays intact as a reference and is excluded from the install ZIP.
 
 ## Installation
 
 1. Extract the release ZIP into `Documents\Elder Scrolls Online\live\AddOns\`. The result must be `AddOns\BattlegroundDossier\BattlegroundDossier.txt`, with the Lua files beside it. Documents may be redirected to OneDrive on some systems.
-2. Alternatively, copy this project's manifest, all fifteen manifest-listed Lua files and `Bindings.xml` into an addon folder named **BattlegroundDossier**, using that exact name. Do not copy the project as a nested `BGDossier\BattlegroundDossier` folder. When updating an existing installation, replace the addon files and leave the separate SavedVariables file in place.
-3. Restart ESO or return to character selection. Enable **Battleground Dossier** in Add-Ons. On a newer client API, check the compatibility notes before allowing an out-of-date addon.
-4. Enter a character and type `/bgd`. No dependencies need enabling.
+2. Alternatively, copy this project's manifest, all twenty manifest-listed Lua files and `Bindings.xml` into an addon folder named **BattlegroundDossier**, using that exact name. Do not copy the project as a nested `BGDossier\BattlegroundDossier` folder. When updating an existing installation, replace the addon files and leave the separate SavedVariables file in place.
+3. Disable the old **BGSessionTracker** addon in ESO to avoid duplicate HUDs and command conflicts. Its source and SavedVariables can remain on disk. Only Battleground Dossier needs enabling.
+4. Restart ESO or return to character selection. Enable **Battleground Dossier** in Add-Ons. On a newer client API, check the compatibility notes before allowing an out-of-date addon.
+5. Enter a character and type `/bgd`. No dependencies need enabling.
 
-ESO writes `SavedVariables\BattlegroundDossierSavedVariables.lua` when logging out or reloading the UI. Account-wide settings, histories and statistics are shared by your characters; player identity keys include the megaserver. Every saved match identifies the participating local character. As with other addons, a client crash before ESO writes SavedVariables can lose the current session's changes.
+ESO writes `SavedVariables\BattlegroundDossierSavedVariables.lua` when logging out or reloading the UI. Dossier settings, histories and lifetime statistics are account-wide; live HUD preferences and sessions are character-specific. Player identity keys include the megaserver. Every saved match identifies the participating local character. As with other addons, a client crash before ESO writes SavedVariables can lose the current session's changes.
 
 ## Using the interface
 
-`MATCHES` opens compact history rows with result colour, map, mode, date, format, personal K/D/A, damage and team placement. Search players/accounts and combine independent **Result**, **Game mode** and **Format** dropdowns. **Clear filters** clears the search and all active filters. Select any row for its saved scoreboard. **Back** restores history search, page and scroll position.
+`MATCHES` opens compact history rows with result colour, map, mode, date, format, personal K/D/A and damage. PLACE is omitted from this listing; saved placement remains available in match details. Search players/accounts and combine independent **Result**, **Game mode** and **Format** dropdowns. **Clear filters** clears the search and all active filters. Select any row for its saved scoreboard. **Back** restores history search, page and scroll position.
 
 The scoreboard uses fixed column widths, alternating rows, hover highlighting, team stripes and a separately scrolling roster with fixed headers. Numerical headings sort in either direction; **—** values sort last. **★** marks you and **◆** identifies a previous encounter. The team dropdown supports allies, opponents, familiar players and individual teams. Values use grouped thousands and optional K/M abbreviations; hover a row for exact statistics and full identity. Your selected row stays highlighted after returning from its dossier.
 
@@ -29,9 +30,15 @@ Choose **Select as A** / **Select as B** in two dossiers, then **Compare A / B**
 
 `STATISTICS` uses cards for lifetime W/L/D totals, win percentage, stored player identities and familiar opponents, followed by personal records, frequent-player tables and recent averages. Known identities count stored account/character profiles, not a claim that character-only profiles belong to different accounts. Familiar opponents means profiles encountered as opponents at least twice. Trends compare up to ten recent retained matches with the preceding ten, show available sample counts in tooltips, and leave unavailable comparisons blank.
 
-`SETTINGS` groups **Appearance**, **Keybindings**, **Behaviour**, **Data & retention**, and **Debugging**. Existing options remain connected: scale/position, automatic opening, notifications, combat recording, debug messages, storage limits and recognition thresholds. Presentation preferences control compact numbers, ability icons and the default section after login/reload. Storage cards show retained records, profiles and ability summaries. History reset requires arming and confirmation within 30 seconds, with a Cancel option; the protected slash commands also remain available.
+Choose **BG History** within Statistics for your character's retained match history. Select **HEALER / TANK / DPS** and **Last 10 / Last 25 / Last 50 / All retained matches**. Role changes the displayed metrics, independently of optional manually assigned match roles. The character selector separates different characters and servers; role/range persist per character. Summaries include W/L/D, resolved win percentage, average K/D/A, recorded streak, recent results, role-specific totals, best-match links, sample-aware trends and mode/format breakdowns. Objectives with different units stay separate. The sortable personal table has native scrolling and forty-row pages; click a match to open its existing scoreboard and use Back to return. Assign a match role at the bottom of its scoreboard. Old matches stay unclassified. These summaries cover retained details only; the separate Lifetime overview can cover a longer period.
 
-Drag the window to reposition it. Close with **×**, Escape or `/bgd`. It hides on entering combat, and automatic opening is suppressed while combat persists. Native scrollbars navigate long tables; history/player databases use pages of 40, and very long ability aggregates use pages of 80 without discarding recorded IDs. Search is debounced. Controls are reused between renders; a lightweight check refreshes saved-data views only while the window is visible and outside combat.
+All +/- numeric settings now use ESO's native keyboard EditBox template with explicit editing/copy/paste support: click the number, use Ctrl+A or cursor selection, type/paste a plain value such as `1000` or `0.85`, press Enter to commit or Escape to cancel. Focus loss validates and commits/reverts. Invalid/out-of-range values revert; valid values round to the documented step. Typing does not change settings or prune history. Direct commits do not rebuild Settings while transferring focus. The original +/- controls remain available, including independent HUD settings, with disabled states at bounds. Simulated editing tests pass, but actual keyboard acceptance remains a required in-game check.
+
+Character names are formatted through ESO's native unit-name formatter everywhere they are shown, including older saved aliases. Raw identity data and account keys remain intact. Cards use measured font heights and shared internal padding; tables share aligned cell/header insets, categorical centering and a reserved scrollbar gutter. The scoreboard prioritizes player-name width, with full values in tooltips.
+
+`SETTINGS` groups **Appearance**, **Keybindings**, **Live Session HUD**, **Behaviour**, **Data & retention**, and **Debugging**. Existing options remain connected: scale/position, automatic opening, notifications, combat recording, debug messages, storage limits and recognition thresholds. Presentation preferences control compact numbers, ability icons and the default section after login/reload. Storage cards show retained records, profiles and ability summaries. History reset requires arming and confirmation within 30 seconds, with a Cancel option; the protected slash commands also remain available.
+
+Drag the window to reposition it. Close with **×**, Escape or `/bgd`; Escape first cancels a focused numeric edit. It hides on entering combat, and automatic opening is suppressed while combat persists. The requested scale is retained while the rendered window fits the current screen/UI root. Native scrollbars navigate long tables; history/player databases use pages of 40, and very long ability aggregates use pages of 80 without discarding recorded IDs. Search is debounced without overwriting focused text; switching sections cancels pending search redraws. Controls are reused between renders; a lightweight check refreshes saved-data views only while visible, outside combat and without an active numeric edit. Addon toggle bindings are ignored while an addon input owns focus.
 
 The Format dropdown includes recorded team-capacity formats (such as 6v6v6), Competitive (authoritative MMR-impact flag) and Big Team Battles (reported team capacity at least six). Recorded participant counts remain separate from capacity. “Competitive” is not inferred solely from a four-player team size.
 
@@ -50,13 +57,40 @@ The Format dropdown includes recorded team-capacity formats (such as 6v6v6), Com
 | `/bgd reset` | Arm destructive history reset for 30 seconds |
 | `/bgd reset confirm` | Confirm armed reset; settings are retained |
 
-Only `/bgd` is registered. BGSessionTracker files and commands are untouched.
+| `/bgtracker` | Toggle live HUD independently of the main window |
+| `/bgtracker show` / `/bgtracker hide` | Set HUD visibility |
+| `/bgtracker scale 1.25` | Set HUD scale (0.65?1.75) |
+| `/bgtracker opacity 0.82` | Set HUD background opacity (0?1) |
+| `/bgtracker header on` / `/bgtracker header off` | Show/hide HUD header |
+| `/bgtracker position reset` | Reset HUD position |
+| `/bgtracker help` | Show HUD command help |
+| `/bglock` | Lock/unlock HUD movement |
+| `/bgstats` | Print current live session statistics |
+| `/bgreset` | Arm session reset; repeat or use `/bgreset confirm` within 15 seconds |
+
+Session reset preserves match history, player encounters and HUD preferences. History reset preserves live HUD statistics.
 
 ## Native keybinding
 
-Open **Settings → Controls → Keybindings → Battleground Dossier** and assign **Toggle Battleground Dossier**. ESO manages supported keys, modifiers and conflict warnings. No default key is assigned, and the addon never captures or changes other bindings. The action uses the same toggle as `/bgd`, so it opens and closes the existing window.
+Open **Settings → Controls → Keybindings → Battleground Dossier** and assign **Toggle Battleground Dossier**. ESO manages supported keys, modifiers and conflict warnings. No default key is assigned, and the addon never captures or changes other bindings. The action uses the same toggle as `/bgd`, so it opens and closes the existing window. A second action, **Toggle Live Session HUD**, independently toggles the HUD, like `/bgtracker`. Both actions share one native binding category and XML file.
 
 The addon's **Settings → Keybindings** section displays the native assignment when all required API information is available; otherwise it shows navigation instructions. There is no speculative menu-opening button or custom key recorder. Native action/localization strings load before `Bindings.xml`; assigned keys are saved by ESO, not duplicated in addon SavedVariables.
+
+## Live session HUD
+
+Under **Settings → LIVE SESSION HUD → Session Tracker Visibility**, choose **Always Visible** or **Battlegrounds Only**. Always Visible preserves the original normal-gameplay behavior and is the default when upgrading. Battlegrounds Only shows the enabled HUD for the entire BG instance, including pregame waiting and the postgame scoreboard, then hides it after leaving. The setting persists per character and applies immediately. Login, reload and returning from loading screens refresh it through the existing activation event, without polling.
+
+**Show live HUD**, `/bgtracker`, its show/hide commands and the HUD keybinding remain the master switch: manually hiding it keeps it hidden in both modes until you enable it again. Manually showing it in Battlegrounds Only mode still respects the location filter. This affects only the small overlay; AP, rank, session results, match recording and the main Dossier window continue independently. Native HUD scene behavior in menus/loading screens is preserved.
+
+In-game check: select Battlegrounds Only outside a BG, enter the waiting area, complete the match and remain at the final scoreboard, then leave. Verify hide/show follows the instance rather than match state. Test `/reloadui`, relogging, both manual toggles and switching back to Always Visible; confirm tracking continues while hidden.
+
+The original compact bar shows **W/L**, **win rate**, **Competitive BG rank** and **AP gained**. It operates with the full Dossier window closed. Configure visibility, locking, independent scale, opacity, header and position under **Settings ? LIVE SESSION HUD**. Unlock it, enter ESO cursor mode and drag to move it; combat disables mouse interaction. The HUD uses native HUD scenes and does not intercept gameplay input while locked.
+
+Wins/losses/draws update only after Dossier successfully saves its verified final scoreboard, normally after its 30-second verification window. There is no second result detector. The HUD's original win percentage is wins divided by wins plus losses, excluding draws; Dossier's lifetime percentage includes all recorded matches. Unresolved results are reported by `/bgstats` and are never invented as losses. A match must have been observed before FINISHED during the current live session to contribute.
+
+Positive AP earnings are verified against wallet changes. Spending does not subtract earnings; initialization and bank/guild-bank transfers are excluded. Missing or inconsistent updates are skipped, never guessed. Competitive rank is queried on activation and match save, throttled to once per minute, refreshed on its native data event and invalidated at season expiry. While awaiting a response, a previously confirmed rank is marked `BG RANK*` (cached); without one, the HUD displays **Loading...**. Unanswered or unusable responses retry up to three queries, one minute apart, then display **Unavailable**. A confirmed zero rank during an active season displays **Unranked**. Late native data events can still recover the rank after a timeout; no unrelated leaderboard substitutes for Competitive. Enable `/bgd debug on` to inspect query states and received rank/schedule values.
+
+Sessions start fresh at login/character change. A deliberate `/reloadui` resumes that character's session only if its one-use marker is at most 120 seconds old. AP is rebased to the current wallet after reload/reset, so gains while offline are not inferred. HUD preferences persist per character. **Old BGSessionTracker preferences/session data are not automatically migrated**: ESO does not reliably load a disabled addon's separate SavedVariables file. That file is left untouched; configure HUD preferences once in Dossier. No old addon needs to remain installed or enabled.
 
 ## How match recording works
 
@@ -119,7 +153,7 @@ uv pip install lupa
 python tests/run.py
 ```
 
-The test runner explicitly imports `lupa.lua51`. **81 offline scenarios pass** (33 core, 22 UI and 26 reliability/keybinding cases), and all fifteen manifest-listed Lua files compile and load. XML structure, native binding action, manifest order and absence of a forced default binding are also checked. Reliability cases include all requested full/understaffed formats, zero statistics, missing accounts/names/teams, similar names, leavers/substitutes, late updates, repeated completion, reload/deactivation, account resolution, rollback on derivation error, existing schema-one history and final statistical corrections. Native drawing and live engine semantics are not mocked faithfully enough to certify gameplay behavior.
+The test runner explicitly imports `lupa.lua51`. **172 offline scenarios pass** (33 core, 22 UI, 26 reliability/keybinding, 39 merge/rank/visibility, 30 personal-history/polish and 22 production UI cases), and all twenty manifest-listed Lua files compile and load. XML structure, both native binding actions, manifest order and absence of a forced default binding are also checked. Tests simulate native click/focus routing, typed edits, Backspace/Delete, selection, paste, focus transfer, deferred commits, centered controls, view layouts and screen fitting. The mock now correctly rejects ButtonControl:GetText; new regressions exercise button hover across shared components and verify that PLACE removal preserves layout, stored placement and navigation. Existing tracking, personal statistics and visibility regressions still pass. **Mocks cannot certify physical keyboard handling, native font rendering or live engine timing.** Complete the [release-candidate in-game checklist](docs/RELEASE_CANDIDATE_UI.md) before confirming those acceptance criteria.
 
 In-game acceptance checklist:
 
@@ -133,4 +167,4 @@ In-game acceptance checklist:
 - Compare players with zero deaths and unavailable stats. Test history filters and long/localized names at the lowest supported scale.
 - Set a low match limit; verify pruned links and retained lifetime totals. Back up SavedVariables, then test the reset timeout/confirmation.
 
-Build the distributable with `python tools/package.py`. It includes only the addon, README and API notes, under the required addon folder name.
+Build the distributable with `python tools/package.py`. It includes only the unified addon and documentation (not the reference tracker or tests), under the required addon folder name.

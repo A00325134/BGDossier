@@ -1,6 +1,13 @@
 local B, C, V = BattlegroundDossier, BattlegroundDossier.Controls, BattlegroundDossier.ViewData
 local U, T = B.UI, C.theme
 function U:Statistics()
+    local c, prefs = self.canvas, B.db.settings.presentation
+    for i, view in ipairs({ "Lifetime overview", "BG History" }) do
+        c:Button(view, 12 + (i - 1) * 275, c.y, 263, function() prefs.statisticsView = view; self:Render() end,
+            (prefs.statisticsView or "Lifetime overview") == view)
+    end
+    c.y = c.y + 48
+    if prefs.statisticsView == "BG History" then self:PersonalHistory(); return end
     local c, s = self.canvas, B.db.stats
     c:Heading("BATTLEGROUND OVERVIEW", "Lifetime totals survive match pruning. Record totals are descriptive, not skill ratings.")
     local resolved = (s.Win or 0) + (s.Loss or 0) + (s.Draw or 0)
@@ -51,29 +58,46 @@ function U:Statistics()
 end
 function U:SettingRow(label, detail, value, onClick)
     local c, y = self.canvas, self.canvas.y
-    c:Panel(12, y, 1086, 70)
-    c:Label(label, 26, y + 5, 775, 28, "ZoFontGameBold")
-    local hint = c:Label(detail, 26, y + 32, 775, 28, "ZoFontGame", T.muted); C:Tooltip(hint, detail)
-    c:Button(value, 840, y + 18, 240, onClick)
-    c.y = y + 80
+    c:Panel(12, y, c.width - 24, 84)
+    c:Label(label, 26, y + 12, 775, 28, "ZoFontGameBold")
+    local hint = c:Label(detail, 26, y + 44, 775, 28, "ZoFontGame", T.muted); C:Tooltip(hint, detail)
+    c:Button(value, 840, y + 25, 240, onClick)
+    c.y = y + 96
 end
 function U:Settings()
     local c, settings = self.canvas, B.db.settings
     local prefs = settings.presentation
     c:Heading("APPEARANCE", "Window position, scale and number presentation are saved account-wide.")
-    local function adjustment(key, label, step, low, high, detail)
+    local function adjustment(key, label, step, low, high, detail, store, onChange)
+        local values = store or settings
         local y = c.y
-        c:Panel(12, y, 1086, 76); c:Label(label, 26, y + 5, 640, 28, "ZoFontGameBold")
-        C:Tooltip(c:Label(detail, 26, y + 35, 640, 28, "ZoFontGame", T.muted), detail)
-        local function change(delta)
-            settings[key] = math.max(low, math.min(high, settings[key] + delta))
-            if key == "scale" then self.window:SetScale(settings.scale) end
-            if key == "historyLimit" then B.Storage:Prune(); self.abilityCache = {} end
-            self:Render(true)
+        c:Panel(12, y, c.width - 24, 88); c:Label(label, 26, y + 12, 640, 28, "ZoFontGameBold")
+        C:Tooltip(c:Label(detail, 26, y + 46, 640, 28, "ZoFontGame", T.muted), detail)
+        local minus, plus
+        local function commit(value, fromEdit)
+            values[key] = value
+            if store then onChange()
+            else
+                if key == "scale" then self:ApplyScale() end
+                if key == "historyLimit" then B.Storage:Prune(); self.abilityCache = {} end
+            end
+            if minus then C:SetButtonEnabled(minus, value > low); C:SetButtonEnabled(plus, value < high) end
+            -- Avoid rebuilding/hiding native editors during focus transfer.
+            if not fromEdit then self:Render(true) end
         end
-        c:Button("−", 720, y + 20, 48, function() change(-step) end)
-        c:Label(V.Number(settings[key]), 780, y + 20, 225, 34, "ZoFontGameBold", T.gold, TEXT_ALIGN_CENTER)
-        c:Button("+", 1020, y + 20, 48, function() change(step) end); c.y = y + 86
+        local function change(delta)
+            C:CancelNumeric()
+            local value = math.max(low, math.min(high, values[key] + delta))
+            commit(math.floor(value * 1000000 + 0.5) / 1000000)
+        end
+        local stepWidth, gap, fieldWidth = C.layout.stepWidth, C.layout.gap, C.layout.numberWidth
+        local left = c.width - C.layout.settingsRight - stepWidth * 2 - gap * 2 - fieldWidth
+        minus = c:Button("−", left, y + 26, stepWidth, function() change(-step) end)
+        local edit = c:NumberEdit(values[key], left + stepWidth + gap, y + 26, fieldWidth, low, high, step, function(value) commit(value, true) end)
+        edit.settingKey, edit.settingStore = key, values
+        plus = c:Button("+", left + stepWidth + gap * 2 + fieldWidth, y + 26, stepWidth, function() change(step) end)
+        C:SetButtonEnabled(minus, values[key] > low); C:SetButtonEnabled(plus, values[key] < high)
+        c.y = y + 100
     end
     local function toggle(key, label, detail, presentation)
         local store = presentation and prefs or settings
@@ -83,7 +107,7 @@ function U:Settings()
             self:Render(true)
         end)
     end
-    adjustment("scale", "UI scale", 0.05, 0.6, 1.2, "Adjust from 60% to 120%. The window stays clamped to the screen.")
+    adjustment("scale", "UI scale", 0.05, 0.6, 1.2, "Requested scale 60–120%; the rendered window automatically fits the screen without changing this preference.")
     self:SettingRow("Window position", "Restore the window to the centre of the screen.", "Centre window", function() settings.position = nil; self:Position() end)
     toggle("compactNumbers", "Compact large numbers", "Use K / M in tables and cards. Tooltips always retain precise values.", true)
     toggle("abilityIcons", "Observed ability icons", "Use the icon returned for the exact ability ID; unknown icons stay neutral.", true)
@@ -91,6 +115,44 @@ function U:Settings()
     c:Paragraph("Assign Toggle Battleground Dossier in ESO's Settings → Controls → Keybindings, under Battleground Dossier. No default key is assigned.")
     c:Paragraph("Current shortcut: " .. (B.Keybindings:Assigned() or "Check ESO's native Controls menu"), T.gold)
     c:Paragraph("ESO manages supported keys, modifiers and conflicts. The shortcut and /bgd both toggle this window.", T.muted)
+    c:Paragraph("Toggle Live Session HUD is a separate optional native binding. /bgtracker also toggles the HUD.", T.muted)
+    c:Heading("LIVE SESSION HUD", "Independent compact overlay. HUD preferences and sessions are character-specific; match history remains account-wide.")
+    local live = B.LiveSession
+    if live and live:IsReady() then
+        local p = live.preferences
+        c:Paragraph("HUD shortcut: " .. (B.Keybindings:Assigned("BGD_TOGGLE_HUD") or "Assign Toggle Live Session HUD in ESO's Controls menu"), T.muted)
+        local function hudToggle(key, label, detail)
+            self:SettingRow(label, detail, p[key] and "Enabled" or "Disabled", function() p[key] = not p[key]; live:ApplyPreferences(); self:Render(true) end)
+        end
+        hudToggle("visible", "Show live HUD", "Master switch for the overlay. Manual toggles respect Session Tracker Visibility; tracking continues while hidden.")
+        local visibilityY = c.y
+        c:Panel(12, visibilityY, c.width - 24, 88)
+        c:Label("Session Tracker Visibility", 26, visibilityY + 12, 620, 28, "ZoFontGameBold")
+        C:Tooltip(c:Label("Choose where the enabled HUD appears. Session tracking always continues.", 26, visibilityY + 46, 620, 28, "ZoFontGame", T.muted),
+            "Always Visible: normal gameplay inside and outside Battlegrounds.\nBattlegrounds Only: the entire BG instance, including pregame and postgame.\nShow live HUD and /bgtracker remain the master visibility switch. This never changes the main Dossier window.")
+        for i, option in ipairs({ { value = "always", label = "Always Visible" }, { value = "battlegroundsOnly", label = "Battlegrounds Only" } }) do
+            c:Button(option.label, 674 + (i - 1) * 208, visibilityY + 26, 196, function()
+                p.visibilityMode = option.value; live:ApplyVisibility(); self:Render(true)
+            end, p.visibilityMode == option.value)
+        end
+        c.y = visibilityY + 100
+        hudToggle("locked", "Lock HUD position", "Disable mouse interaction. Unlock and enable ESO cursor mode to drag; combat always disables dragging.")
+        adjustment("scale", "HUD scale", 0.05, 0.65, 1.75, "Scale the compact bar independently of the main Dossier window.", p, function() live:ApplyPreferences() end)
+        adjustment("opacity", "HUD background opacity", 0.05, 0, 1, "Adjust the original HUD's background transparency from 0 to 1.", p, function() live:ApplyPreferences() end)
+        hudToggle("header", "Show HUD header", "Keep or hide the compact BG SESSION title.")
+        self:SettingRow("HUD position", "Restore this character's HUD to its original default position.", "Reset HUD position", function() p.x, p.y = nil, nil; live:ApplyPreferences(); self:Render(true) end)
+        self:SettingRow("Live session statistics", "Resets live W/L, draws and AP only. Dossier history and player records stay intact.", "Arm session reset", function() live.resetUntil = GetFrameTimeMilliseconds() + 15000; self.liveResetArmed = true; self:Render(true) end)
+        if self.liveResetArmed then
+            c:Paragraph("Confirm within 15 seconds to reset the current live session. This does not delete recorded matches.", T.gold)
+            c:Button("Confirm session reset", 12, c.y, 300, function()
+                if live.resetUntil and GetFrameTimeMilliseconds() <= live.resetUntil then live:ResetSession()
+                else B.Say("Session reset confirmation expired.") end
+                self.liveResetArmed = nil; self:Render(true)
+            end)
+            c:Button("Cancel session reset", 324, c.y, 250, function() live.resetUntil, self.liveResetArmed = nil, nil; self:Render(true) end)
+            c.y = c.y + 46
+        end
+    else c:Paragraph(live and live.disabledReason or "Live HUD starts when the addon initializes. Existing Dossier history remains available.", T.muted) end
     c:Heading("BEHAVIOUR")
     toggle("autoOpen", "Open completed matches", "Automatically open the saved scoreboard after a match, outside combat.")
     toggle("notifications", "Familiar-player notifications", "Show a subtle match-start recognition message in chat.")

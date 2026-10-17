@@ -3,7 +3,7 @@ local B = BattlegroundDossier
 B.ViewData = {}
 local V = B.ViewData
 function V.Name(p)
-    for _, key in ipairs({ "character", "account", "latestCharacter" }) do if B.Normalize(p[key]) then return p[key] end end
+    for _, key in ipairs({ "character", "account", "latestCharacter" }) do if B.Normalize(p[key]) then return key == "account" and p[key] or B.CharacterName(p[key]) end end
     return p.identityConfidence == "unresolved" and "Unresolved participant" or "Unknown player"
 end
 function V.MapName(m) return m.zoneName or m.map or "Unknown Battleground" end
@@ -14,7 +14,7 @@ end
 function V.ProfileName(p)
     local account = B.Normalize(p.account)
     if account and account:sub(1, 1) == "@" then return p.account end
-    return B.Normalize(p.latestCharacter) and p.latestCharacter or "Unknown player"
+    return B.Normalize(p.latestCharacter) and B.CharacterName(p.latestCharacter) or "Unknown player"
 end
 function V.Class(p) return B.API:Call("GetClassName", GENDER_MALE, p.classId or 0) or "Unknown" end
 function V.Precise(v)
@@ -64,7 +64,11 @@ function V.Format(m)
 end
 function V.LocalPlayer(m)
     if m.localIdentityAmbiguous then return nil end
-    for _, p in ipairs(m.players or {}) do if p.isLocal then return p end end
+    local found
+    for _, p in ipairs(m.players or {}) do
+        if p.isLocal then if found then return nil end; found = p end
+    end
+    return found
 end
 function V.Search(p, query)
     query = B.Normalize(query) or ""

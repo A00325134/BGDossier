@@ -39,7 +39,7 @@ local function activeTables()
 end
 local function click(text)
     for _, button in ipairs(U.canvas.pools.button or {}) do
-        if not button:IsHidden() and button:GetText() == text then button.handlers.OnClicked(button); return end
+        if not button:IsHidden() and button:GetLabelControl():GetText() == text then button.handlers.OnClicked(button); return end
     end
     error("Visible button not found: " .. text)
 end
